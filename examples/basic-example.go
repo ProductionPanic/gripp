@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/ProductionPanic/gripp"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
+
+	"github.com/ProductionPanic/gripp"
+	"github.com/joho/godotenv"
 )
 
 // an example of how i want the api to work
@@ -26,7 +27,7 @@ func main() {
 	}
 
 	// fetching projects
-	projects, err := client.Projects().Filter("name", "My Project").Get()
+	projects, err := client.Projects().Filter("name", "like", "%minitrekkers%").Get()
 	if err != nil {
 		panic(err)
 	}

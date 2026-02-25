@@ -36,13 +36,21 @@ type Response struct {
 	Error  string          `json:"error,omitempty"`
 }
 
+type GetResult[T any] struct {
+	Rows                  []T  `json:"rows"`
+	Count                 int  `json:"count"`
+	Start                 int  `json:"start"`
+	Limit                 int  `json:"limit"`
+	NextStart             int  `json:"next_start"`
+	MoreItemsInCollection bool `json:"more_items_in_collection"`
+}
+
 type RequestBuilder[T any] struct {
 	client   *Client
 	base     string
 	filters  []RequestFilter
 	paging   *RequestPaging
 	ordering *RequestOrdering
-	Value    interface{}
 }
 
 func (rb *RequestBuilder[T]) Filter(input ...interface{}) *RequestBuilder[T] {
@@ -83,6 +91,33 @@ func (rb *RequestBuilder[T]) OrderBy(field, direction string) *RequestBuilder[T]
 	return rb
 }
 
+func (rb *RequestBuilder[T]) Delete(itemId int) error {
+	// params example
+	//"params":[
+	//   {{itemid}}
+	//],
+	// build the request body
+	request := BaseRequest{
+		Method: rb.base + ".delete", // example: "project.delete"
+		Params: []interface{}{
+			itemId,
+		},
+		ID: 1,
+	}
+
+	// send the request and return the response
+	var requests RequestType
+	requests = append(requests, request)
+
+	_, err := rb.client.makeRequest(requests)
+	if err != nil {
+		log.Println("Error making request:")
+		return err
+	}
+
+	return nil
+}
+
 func (rb *RequestBuilder[T]) Get() ([]T, error) {
 	// params example
 	//"params":[
@@ -115,7 +150,12 @@ func (rb *RequestBuilder[T]) Get() ([]T, error) {
 				Paging    *RequestPaging    `json:"paging,omitempty"`
 				Orderings []RequestOrdering `json:"orderings,omitempty"`
 			}{
-				Paging: rb.paging,
+				Paging: func() *RequestPaging {
+					if rb.paging != nil {
+						return rb.paging
+					}
+					return &RequestPaging{0, 250}
+				}(),
 				Orderings: func() []RequestOrdering {
 					if rb.ordering != nil {
 						return []RequestOrdering{*rb.ordering}
@@ -138,16 +178,15 @@ func (rb *RequestBuilder[T]) Get() ([]T, error) {
 	}
 
 	for _, response := range responses {
-		var result []T
+		var result GetResult[T]
 		err = json.Unmarshal(response.Result, &result)
 		if err != nil {
 			// log the error and the response for debugging
-			log.Println(response.Result)
 			log.Printf("Error unmarshalling response: %v\nResponse: %s\n", err, string(response.Result))
 			return nil, err
 		}
 
-		return result, nil
+		return result.Rows, nil
 	}
 
 	return nil, nil
