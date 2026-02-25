@@ -17,6 +17,7 @@ type RequestFilter struct {
 	Field    string      `json:"field"`
 	Operator string      `json:"operator"`
 	Value    interface{} `json:"value"`
+	Value2   interface{} `json:"value2"`
 }
 
 type RequestPaging struct {
@@ -45,7 +46,7 @@ type GetResult[T any] struct {
 	MoreItemsInCollection bool `json:"more_items_in_collection"`
 }
 
-type RequestBuilder[T any] struct {
+type requestBuilder[T any] struct {
 	client   *Client
 	base     string
 	filters  []RequestFilter
@@ -55,9 +56,14 @@ type RequestBuilder[T any] struct {
 
 const maxPageSize = 250
 
-func (rb *RequestBuilder[T]) Filter(input ...interface{}) *RequestBuilder[T] {
+// Filter can be called with either 2 or 3 arguments:
+// - Filter("name", "like", "%minitrekkers%") // with operator
+// - Filter("name", "%minitrekkers%")
+// In the second case, the operator defaults to "equals"
+// if 4 arguments are passed the fourth will be added as value2
+func (rb *requestBuilder[T]) Filter(input ...interface{}) *requestBuilder[T] {
 	var field, operator string
-	var value interface{}
+	var value, value2 interface{}
 	if len(input) == 3 {
 		field = input[0].(string)
 		operator = input[1].(string)
@@ -66,18 +72,26 @@ func (rb *RequestBuilder[T]) Filter(input ...interface{}) *RequestBuilder[T] {
 		field = input[0].(string)
 		operator = "equals"
 		value = input[1]
+	} else if len(input) == 4 {
+		field = input[0].(string)
+		operator = input[1].(string)
+		value = input[2]
+		value2 = input[3]
 	} else {
 		return rb
 	}
 	rb.filters = append(rb.filters, RequestFilter{
 		Field:    rb.base + "." + field, // example: "project.name"
 		Value:    value,
+		Value2:   value2,
 		Operator: operator,
 	})
 	return rb
 }
 
-func (rb *RequestBuilder[T]) Page(firstResult, maxResults int) *RequestBuilder[T] {
+// Page sets the pagination for the request. If maxResults is less than or equal to 0, or greater than the maximum page size, it defaults to the maximum page size.
+// if no paging is set, the Get method will automatically paginate through all results until there are no more items in the collection.
+func (rb *requestBuilder[T]) Page(firstResult, maxResults int) *requestBuilder[T] {
 	if maxResults <= 0 || maxResults > maxPageSize {
 		maxResults = maxPageSize
 	}
@@ -88,7 +102,8 @@ func (rb *RequestBuilder[T]) Page(firstResult, maxResults int) *RequestBuilder[T
 	return rb
 }
 
-func (rb *RequestBuilder[T]) OrderBy(field, direction string) *RequestBuilder[T] {
+// OrderBy sets the ordering for the request. The field should be the name of the field to order by, and the direction should be either "asc" or "desc".
+func (rb *requestBuilder[T]) OrderBy(field, direction string) *requestBuilder[T] {
 	rb.ordering = &RequestOrdering{
 		Field:     rb.base + "." + field, // example: "project.name"
 		Direction: direction,
@@ -96,7 +111,8 @@ func (rb *RequestBuilder[T]) OrderBy(field, direction string) *RequestBuilder[T]
 	return rb
 }
 
-func (rb *RequestBuilder[T]) Delete(itemId int) error {
+// Delete sends a delete request for the item with the given ID. The item ID is typically the unique identifier for the item in Gripp, such as project ID, employee ID, etc.
+func (rb *requestBuilder[T]) Delete(itemId int) error {
 	// params example
 	//"params":[
 	//   {{itemid}}
@@ -123,7 +139,7 @@ func (rb *RequestBuilder[T]) Delete(itemId int) error {
 	return nil
 }
 
-func (rb *RequestBuilder[T]) Get() ([]T, error) {
+func (rb *requestBuilder[T]) get(method string) ([]T, error) {
 	// params example
 	//"params":[
 	//	[
@@ -149,7 +165,7 @@ func (rb *RequestBuilder[T]) Get() ([]T, error) {
 	// build the request body
 	buildRequest := func(paging *RequestPaging) BaseRequest {
 		return BaseRequest{
-			Method: rb.base + ".get", // example: "project.get"
+			Method: rb.base + "." + method, // example: "project.get"
 			Params: []interface{}{
 				rb.filters,
 				struct {
@@ -233,4 +249,21 @@ func (rb *RequestBuilder[T]) Get() ([]T, error) {
 			return allRows, nil
 		}
 	}
+}
+
+// Get sends a get request with the specified filters, pagination, and ordering, and returns the results as a slice of the specified type T. If pagination is not set, it will automatically paginate through all results until there are no more items in the collection.
+func (rb *requestBuilder[T]) Get() ([]T, error) {
+	return rb.get("get")
+}
+
+// GetOne does pretty much the same as the Get method but only returns the first result.
+func (rb *requestBuilder[T]) GetOne() (*T, error) {
+	results, err := rb.get("get")
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, nil
+	}
+	return &results[0], nil
 }

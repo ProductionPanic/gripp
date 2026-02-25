@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ProductionPanic/gripp"
+	"github.com/ProductionPanic/gripp/examples/utils"
 	"github.com/joho/godotenv"
 )
 
@@ -28,10 +29,27 @@ func main() {
 
 	// fetching projects
 	projects, err := client.Projects().
-		//Filter("name", "like", "%minitrekkers%").
+		Filter("archived", false).
+		Filter("name", "like", "%minitrekkers%").
 		Get()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Found %d projects", len(projects))
+
+	for _, project := range projects {
+		fmt.Println("Project:")
+		fmt.Println("Name:", project.Name)
+		fmt.Println("Id:", project.ID)
+
+		fmt.Printf("Employees:\n")
+		for _, employee := range project.Employees {
+			fmt.Printf("- %s: %s\n", employee.ID, employee.SearchName)
+		}
+
+		fmt.Println("Project lines:")
+		for _, line := range project.ProjectLines {
+			fmt.Printf("- %d: %s\n", line.ID, line.Searchname)
+		}
+		utils.Br()
+	}
 }
