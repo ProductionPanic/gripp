@@ -53,6 +53,8 @@ type RequestBuilder[T any] struct {
 	ordering *RequestOrdering
 }
 
+const maxPageSize = 250
+
 func (rb *RequestBuilder[T]) Filter(input ...interface{}) *RequestBuilder[T] {
 	var field, operator string
 	var value interface{}
@@ -76,6 +78,9 @@ func (rb *RequestBuilder[T]) Filter(input ...interface{}) *RequestBuilder[T] {
 }
 
 func (rb *RequestBuilder[T]) Page(firstResult, maxResults int) *RequestBuilder[T] {
+	if maxResults <= 0 || maxResults > maxPageSize {
+		maxResults = maxPageSize
+	}
 	rb.paging = &RequestPaging{
 		FirstResult: firstResult,
 		MaxResults:  maxResults,
@@ -132,7 +137,7 @@ func (rb *RequestBuilder[T]) Get() ([]T, error) {
 	//		"paging":{
 	//			"firstresult":0,
 	//			"maxresults":10
-	//		},
+	//		}
 	//		"orderings":[
 	//			{
 	//				"field":"project.id",
@@ -142,52 +147,90 @@ func (rb *RequestBuilder[T]) Get() ([]T, error) {
 	//	}
 	//],
 	// build the request body
-	request := BaseRequest{
-		Method: rb.base + ".get", // example: "project.get"
-		Params: []interface{}{
-			rb.filters,
-			struct {
-				Paging    *RequestPaging    `json:"paging,omitempty"`
-				Orderings []RequestOrdering `json:"orderings,omitempty"`
-			}{
-				Paging: func() *RequestPaging {
-					if rb.paging != nil {
-						return rb.paging
-					}
-					return &RequestPaging{0, 250}
-				}(),
-				Orderings: func() []RequestOrdering {
-					if rb.ordering != nil {
-						return []RequestOrdering{*rb.ordering}
-					}
-					return nil
-				}(),
+	buildRequest := func(paging *RequestPaging) BaseRequest {
+		return BaseRequest{
+			Method: rb.base + ".get", // example: "project.get"
+			Params: []interface{}{
+				rb.filters,
+				struct {
+					Paging    *RequestPaging    `json:"paging,omitempty"`
+					Orderings []RequestOrdering `json:"orderings,omitempty"`
+				}{
+					Paging: paging,
+					Orderings: func() []RequestOrdering {
+						if rb.ordering != nil {
+							return []RequestOrdering{*rb.ordering}
+						}
+						return nil
+					}(),
+				},
 			},
-		},
-		ID: 1,
+			ID: 1,
+		}
 	}
 
-	// send the request and return the response
-	var requests RequestType
-	requests = append(requests, request)
-
-	responses, err := rb.client.makeRequest(requests)
-	if err != nil {
-		log.Println("Error making request:")
-		return nil, err
+	resolvePaging := func(paging *RequestPaging) *RequestPaging {
+		if paging == nil {
+			return nil
+		}
+		resolved := *paging
+		if resolved.MaxResults <= 0 || resolved.MaxResults > maxPageSize {
+			resolved.MaxResults = maxPageSize
+		}
+		return &resolved
 	}
 
-	for _, response := range responses {
-		var result GetResult[T]
-		err = json.Unmarshal(response.Result, &result)
+	if rb.paging != nil {
+		request := buildRequest(resolvePaging(rb.paging))
+		responses, err := rb.client.makeRequest(RequestType{request})
 		if err != nil {
-			// log the error and the response for debugging
-			log.Printf("Error unmarshalling response: %v\nResponse: %s\n", err, string(response.Result))
+			log.Println("Error making request:")
 			return nil, err
 		}
 
-		return result.Rows, nil
+		for _, response := range responses {
+			var result GetResult[T]
+			err = json.Unmarshal(response.Result, &result)
+			if err != nil {
+				log.Printf("Error unmarshalling response: %v\nResponse: %s\n", err, string(response.Result))
+				return nil, err
+			}
+			return result.Rows, nil
+		}
+
+		return nil, nil
 	}
 
-	return nil, nil
+	start := 0
+	maxResults := maxPageSize
+	var allRows []T
+	for {
+		paging := &RequestPaging{FirstResult: start, MaxResults: maxResults}
+		request := buildRequest(paging)
+		responses, err := rb.client.makeRequest(RequestType{request})
+		if err != nil {
+			log.Println("Error making request:")
+			return nil, err
+		}
+
+		var hadResponse bool
+		for _, response := range responses {
+			hadResponse = true
+			var result GetResult[T]
+			err = json.Unmarshal(response.Result, &result)
+			if err != nil {
+				log.Printf("Error unmarshalling response: %v\nResponse: %s\n", err, string(response.Result))
+				return nil, err
+			}
+			allRows = append(allRows, result.Rows...)
+			if !result.MoreItemsInCollection {
+				return allRows, nil
+			}
+			start = result.NextStart
+		}
+
+		if !hadResponse {
+			return allRows, nil
+		}
+	}
 }

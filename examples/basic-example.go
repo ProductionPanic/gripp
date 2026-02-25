@@ -27,12 +27,11 @@ func main() {
 	}
 
 	// fetching projects
-	projects, err := client.Projects().Filter("name", "like", "%minitrekkers%").Get()
+	projects, err := client.Projects().
+		//Filter("name", "like", "%minitrekkers%").
+		Get()
 	if err != nil {
 		panic(err)
 	}
-
-	for _, project := range projects {
-		fmt.Println(project.Name)
-	}
+	fmt.Printf("Found %d projects", len(projects))
 }
