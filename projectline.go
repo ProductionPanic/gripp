@@ -1,17 +1,18 @@
 package gripp
 
 type ProjectLine struct {
-	Ordering           int    `json:"_ordering"`
-	Internalnote       string `json:"internalnote"`
-	Amount             int    `json:"amount"`
-	Hidefortimewriting bool   `json:"hidefortimewriting"`
-	Sellingprice       string `json:"sellingprice"`
-	Discount           int    `json:"discount"`
-	Buyingprice        string `json:"buyingprice"`
-	Additionalsubject  string `json:"additionalsubject"`
-	Description        string `json:"description"`
-	Hidedetails        bool   `json:"hidedetails"`
-	ID                 int    `json:"id"`
+	client             *Client
+	Ordering           int     `json:"_ordering"`
+	Internalnote       string  `json:"internalnote"`
+	Amount             float64 `json:"amount"`
+	Hidefortimewriting bool    `json:"hidefortimewriting"`
+	Sellingprice       string  `json:"sellingprice"`
+	Discount           int     `json:"discount"`
+	Buyingprice        string  `json:"buyingprice"`
+	Additionalsubject  string  `json:"additionalsubject"`
+	Description        string  `json:"description"`
+	Hidedetails        bool    `json:"hidedetails"`
+	ID                 int     `json:"id"`
 	Createdon          struct {
 		Date         string `json:"date"`
 		TimezoneType int    `json:"timezone_type"`

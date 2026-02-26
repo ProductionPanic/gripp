@@ -32,15 +32,6 @@ type Employee struct {
 	Tags          []WithSearchName[string] `json:"tags"`
 }
 
-func (c *Client) Employee() *EmployeeRepository {
-	return &EmployeeRepository{
-		builder: &requestBuilder[Employee]{
-			client: c,
-			base:   "employee",
-		},
-	}
-}
-
 type EmployeeRepository struct {
 	builder *requestBuilder[Employee]
 }

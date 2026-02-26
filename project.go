@@ -65,12 +65,3 @@ func (p *ProjectRepository) OrderBy(field, direction string) *ProjectRepository 
 	p.builder.OrderBy(field, direction)
 	return p
 }
-
-func (c *Client) Projects() *ProjectRepository {
-	return &ProjectRepository{
-		builder: &requestBuilder[Project]{
-			client: c,
-			base:   "project",
-		},
-	}
-}

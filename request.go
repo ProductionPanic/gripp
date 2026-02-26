@@ -217,7 +217,7 @@ func (rb *requestBuilder[T]) get(method string) ([]T, error) {
 		return nil, nil
 	}
 
-	start := 0
+	start := 1
 	maxResults := maxPageSize
 	var allRows []T
 	for {

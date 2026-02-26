@@ -6,9 +6,10 @@ import (
 	"os"
 
 	"github.com/ProductionPanic/gripp"
-	"github.com/ProductionPanic/gripp/examples/utils"
 	"github.com/joho/godotenv"
 )
+
+const projectLine = 5578
 
 // an example of how i want the api to work
 func main() {
@@ -27,18 +28,18 @@ func main() {
 		panic(err)
 	}
 
-	// fetching employees
-	employees, err := client.Employees().
-		Filter("active", true).
+	// fetching hours
+	hours, err := client.Hours().
+		ByProjectLineID(projectLine).
 		Get()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Employees:")
-	for _, employee := range employees {
-		fmt.Println("Name:", employee.Searchname)
-		fmt.Println("Id:", employee.ID)
-
-		utils.Hr()
+	fmt.Printf("Hours for project line %d:\n", projectLine)
+	total := 0.0
+	for _, hour := range hours {
+		fmt.Printf("- %d: %s - %f\n", hour.ID, hour.Description, hour.Amount)
+		total += hour.Amount
 	}
+	fmt.Printf("Total hours: %f\n", total)
 }

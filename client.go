@@ -12,6 +12,9 @@ type Client struct {
 	apiKey              string
 	url                 string
 	apiconnectorversion int
+	projectRepository   *ProjectRepository
+	employeeRepository  *EmployeeRepository
+	hourRepository      *HourRepository
 }
 
 type Config struct {
@@ -33,11 +36,34 @@ func NewClient(config Config) (*Client, error) {
 		return nil, ErrMissingApiKey
 	}
 
-	return &Client{
+	c := &Client{
 		apiKey:              config.ApiKey,
 		url:                 config.Url,
 		apiconnectorversion: config.ApiConnectorVersion,
-	}, nil
+	}
+
+	c.projectRepository = &ProjectRepository{
+		builder: &requestBuilder[Project]{
+			client: c,
+			base:   "project",
+		},
+	}
+
+	c.employeeRepository = &EmployeeRepository{
+		builder: &requestBuilder[Employee]{
+			client: c,
+			base:   "employee",
+		},
+	}
+
+	c.hourRepository = &HourRepository{
+		builder: &requestBuilder[Hour]{
+			client: c,
+			base:   "hour",
+		},
+	}
+
+	return c, nil
 }
 
 // helper functions for actually making the requests
@@ -72,4 +98,16 @@ func (c *Client) makeRequest(request RequestType) ([]Response, error) {
 	}
 
 	return response, nil
+}
+
+func (c *Client) Projects() *ProjectRepository {
+	return c.projectRepository
+}
+
+func (c *Client) Employees() *EmployeeRepository {
+	return c.employeeRepository
+}
+
+func (c *Client) Hours() *HourRepository {
+	return c.hourRepository
 }

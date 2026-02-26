@@ -15,7 +15,7 @@ type Hour struct {
 		TimezoneType int    `json:"timezone_type"`
 		Timezone     string `json:"timezone"`
 	} `json:"date"`
-	Amount       int         `json:"amount"`
+	Amount       float64     `json:"amount"`
 	Description  string      `json:"description"`
 	Authorizedon interface{} `json:"authorizedon"`
 	Definitiveon interface{} `json:"definitiveon"`
@@ -51,3 +51,60 @@ type Hour struct {
 	Authorizedby interface{} `json:"authorizedby"`
 	Definitiveby interface{} `json:"definitiveby"`
 }
+
+type HourRepository struct {
+	builder *requestBuilder[Hour]
+}
+
+func (h *HourRepository) Get() ([]Hour, error) {
+	return h.builder.Get()
+}
+
+func (h *HourRepository) GetOne() (*Hour, error) {
+	return h.builder.GetOne()
+}
+
+func (h *HourRepository) ByProjectLineID(ProjectLineIDs ...int) *HourRepository {
+	if len(ProjectLineIDs) == 0 {
+		return h
+	} else if len(ProjectLineIDs) == 1 {
+		h.builder.Filter("offerprojectline", ProjectLineIDs[0])
+		return h
+	}
+	h.builder.Filter("offerprojectline", "in", ProjectLineIDs)
+	return h
+}
+
+func (h *HourRepository) ByProjectLine(projectLines ...*ProjectLine) *HourRepository {
+	if len(projectLines) == 0 {
+		return h
+	} else if len(projectLines) == 1 {
+		h.builder.Filter("offerprojectline", projectLines[0].ID)
+		return h
+	}
+	ids := make([]int, len(projectLines))
+	for i, pl := range projectLines {
+		ids[i] = pl.ID
+	}
+	h.builder.Filter("offerprojectline", "in", ids)
+	return h
+}
+
+func (h *HourRepository) Delete(hourid int) error {
+	return h.builder.Delete(hourid)
+}
+
+func (h *HourRepository) Filter(input ...interface{}) *HourRepository {
+	h.builder.Filter(input...)
+	return h
+}
+
+func (h *HourRepository) Page(firstResult, maxResults int) *HourRepository {
+	h.builder.Page(firstResult, maxResults)
+	return h
+}
+
+// TODO:
+//func (h *HourRepository) Create(hour HourCreateRequest) (*Hour, error) {
+//	return h.builder.Create(hour)
+//}
