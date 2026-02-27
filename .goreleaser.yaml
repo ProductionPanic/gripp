@@ -1,3 +1,9 @@
+version: 2
+
+# This tells GoReleaser NOT to look for a main function
+builds:
+  - skip: true
+
 release:
   github:
     owner: Freekiehsoes
