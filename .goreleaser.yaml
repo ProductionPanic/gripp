@@ -3,11 +3,11 @@ builds:
 
 release:
   github:
-    owner: Freekiehsoes
+    owner: ProductionPanic
     name: gripp
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^reference:'
+      - '^reference'
