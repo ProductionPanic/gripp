@@ -1,14 +1,5 @@
 package gripp
 
-type HourCreateRequest struct {
-	Status           string  `json:"status"`
-	Date             string  `json:"date"`
-	Description      string  `json:"description"`
-	Amount           float64 `json:"amount"`
-	Employee         int     `json:"employee"`
-	Offerprojectline int     `json:"offerprojectline"`
-}
-
 type Hour struct {
 	Date struct {
 		Date         string `json:"date"`
@@ -75,7 +66,7 @@ func (h *HourRepository) ByProjectLineID(ProjectLineIDs ...int) *HourRepository 
 	return h
 }
 
-func (h *HourRepository) ByProjectLine(projectLines ...*ProjectLine) *HourRepository {
+func (h *HourRepository) ByProjectLine(projectLines ...ProjectLine) *HourRepository {
 	if len(projectLines) == 0 {
 		return h
 	} else if len(projectLines) == 1 {
@@ -87,6 +78,17 @@ func (h *HourRepository) ByProjectLine(projectLines ...*ProjectLine) *HourReposi
 		ids[i] = pl.ID
 	}
 	h.builder.Filter("offerprojectline", "in", ids)
+	return h
+}
+
+func (h *HourRepository) ByEmployeeID(EmployeeIDs ...int) *HourRepository {
+	if len(EmployeeIDs) == 0 {
+		return h
+	} else if len(EmployeeIDs) == 1 {
+		h.builder.Filter("employee", EmployeeIDs[0])
+		return h
+	}
+	h.builder.Filter("employee", "in", EmployeeIDs)
 	return h
 }
 
@@ -104,7 +106,18 @@ func (h *HourRepository) Page(firstResult, maxResults int) *HourRepository {
 	return h
 }
 
-// TODO:
-//func (h *HourRepository) Create(hour HourCreateRequest) (*Hour, error) {
-//	return h.builder.Create(hour)
-//}
+type HourCreateData struct {
+	Amount           float64 `json:"amount"`
+	Date             string  `json:"date"`
+	Description      string  `json:"description"`
+	Employee         int     `json:"employee"`
+	Offerprojectline int     `json:"offerprojectline"`
+}
+
+func (h *HourRepository) Create(hour HourCreateData) (*CreateResult, error) {
+	if hour.Date == "" {
+		hour.Date = GetToday()
+	}
+
+	return h.builder.Create(hour)
+}

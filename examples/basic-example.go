@@ -29,8 +29,8 @@ func main() {
 
 	// fetching projects
 	projects, err := client.Projects().
-		Filter("archived", false).
-		Filter("name", "like", "%ticket%").
+		Archived(false).
+		Search("name", "minitrekker").
 		Get()
 	if err != nil {
 		panic(err)
@@ -46,19 +46,21 @@ func main() {
 			fmt.Printf("- %s: %s\n", employee.ID, employee.SearchName)
 		}
 
+		hours, err := client.Hours().ByProjectLine(project.ProjectLines...).ByEmployeeID().Get()
+		if err != nil {
+			log.Printf("Error fetching hours for project %d: %v\n", project.ID, err)
+		}
+
 		fmt.Println("Project lines:")
-		//for _, line := range project.ProjectLines {
-		//	fmt.Printf("- %d: %s\n", line.ID, line.Searchname)
-		//	hours, err := client.Hours().ByProjectLineID(line.ID).Get()
-		//	if err != nil {
-		//		log.Printf("Error fetching hours for project line %d: %v\n", line.ID, err)
-		//		continue
-		//	}
-		//	fmt.Printf("  Hours:\n")
-		//	for _, hour := range hours {
-		//		fmt.Printf("  - %d: %s - %f\n", hour.ID, hour.Description, hour.Amount)
-		//	}
-		//}
+		for _, line := range project.ProjectLines {
+			fmt.Printf("- %d: %s\n", line.ID, line.Searchname)
+			for _, hour := range hours {
+				if hour.Offerprojectline.ID != line.ID {
+					continue
+				}
+				fmt.Printf("      - %d: %s - %f | %s\n", hour.ID, hour.Description, hour.Amount, hour.Employee.Searchname)
+			}
+		}
 		utils.Br()
 	}
 }

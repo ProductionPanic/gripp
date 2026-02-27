@@ -17,7 +17,7 @@ type RequestFilter struct {
 	Field    string      `json:"field"`
 	Operator string      `json:"operator"`
 	Value    interface{} `json:"value"`
-	Value2   interface{} `json:"value2"`
+	Value2   interface{} `json:"value2,omitempty"`
 }
 
 type RequestPaging struct {
@@ -139,6 +139,11 @@ func (rb *requestBuilder[T]) Delete(itemId int) error {
 	return nil
 }
 
+type CreateResult struct {
+	Success  bool `json:"success"`
+	RecordId int  `json:"recordid"`
+}
+
 func (rb *requestBuilder[T]) get(method string) ([]T, error) {
 	// params example
 	//"params":[
@@ -217,7 +222,7 @@ func (rb *requestBuilder[T]) get(method string) ([]T, error) {
 		return nil, nil
 	}
 
-	start := 1
+	start := 0
 	maxResults := maxPageSize
 	var allRows []T
 	for {
@@ -266,4 +271,33 @@ func (rb *requestBuilder[T]) GetOne() (*T, error) {
 		return nil, nil
 	}
 	return &results[0], nil
+}
+
+// Create allows to insert a new item of type T into Gripp.
+func (rb *requestBuilder[T]) Create(item interface{}) (*CreateResult, error) {
+	request := BaseRequest{
+		Method: rb.base + ".create", // example: "project.create"
+		Params: []interface{}{
+			item,
+		},
+		ID: 1,
+	}
+
+	responses, err := rb.client.makeRequest(RequestType{request})
+	if err != nil {
+		log.Println("Error making request:")
+		return nil, err
+	}
+
+	for _, response := range responses {
+		var result CreateResult
+		err = json.Unmarshal(response.Result, &result)
+		if err != nil {
+			log.Printf("Error unmarshalling response: %v\nResponse: %s\n", err, string(response.Result))
+			return nil, err
+		}
+		return &result, nil
+	}
+
+	return nil, nil
 }

@@ -70,6 +70,8 @@ func NewClient(config Config) (*Client, error) {
 func (c *Client) makeRequest(request RequestType) ([]Response, error) {
 	data, err := json.Marshal(request)
 
+	log.Printf("Request: %s\n", string(data))
+
 	req, err := http.NewRequest("POST", c.url, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err

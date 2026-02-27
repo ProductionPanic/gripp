@@ -56,6 +56,24 @@ func (p *ProjectRepository) Filter(input ...interface{}) *ProjectRepository {
 	return p
 }
 
+func (p *ProjectRepository) Archived(archived bool) *ProjectRepository {
+	p.builder.Filter("archived", archived)
+	return p
+}
+
+func (p *ProjectRepository) ByEmployee(employeeIDs ...int) *ProjectRepository {
+	if len(employeeIDs) == 0 {
+		return p
+	}
+	p.builder.Filter("employees", "in", employeeIDs)
+	return p
+}
+
+func (p *ProjectRepository) Search(column string, value string) *ProjectRepository {
+	p.builder.Filter(column, "like", "%"+value+"%")
+	return p
+}
+
 func (p *ProjectRepository) Page(firstResult, maxResults int) *ProjectRepository {
 	p.builder.Page(firstResult, maxResults)
 	return p
